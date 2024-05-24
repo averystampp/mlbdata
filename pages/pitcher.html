@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Player.FullName}}</title>
+</head>
+<body>
+    <a href="/">Home</a>
+    <a href="/team/overview/{{.TeamID}}">Back to Roster</a>
+    <h2>{{.Player.FullName}}</h2>
+    <p>{{.Player.PitchHand.Description}} handed {{.Player.PrimaryPosition.Name}}</p>
+    <h4>Pitcher</h4>
+    <form action="/player/export" method="post">
+        <input type="hidden" name="callback" value="{{.Callback}}">
+        <input type="hidden" name="data" value="{{.DataRequest}}">
+        <input type="submit" value="Export">
+    </form>
+    <table class="player">
+        <thead>
+            <tr class="psh">
+                <td class="player-stat-header">Season</td>
+                <td class="player-stat-header">Team</td>
+                <td class="player-stat-header">G</td>
+                <td class="player-stat-header">K</td>
+                <td class="player-stat-header">H</td>
+                <td class="player-stat-header">BB</td>
+                <td class="player-stat-header">HR</td>
+                <td class="player-stat-header">OBP</td>
+                <td class="player-stat-header">OPS</td>
+                <td class="player-stat-header">SLG</td>
+                <td class="player-stat-header">AVG</td>
+                <td class="player-stat-header">ERA</td>
+                <td class="player-stat-header">IP</td>
+                <td class="player-stat-header">ER</td>
+                <td class="player-stat-header">S</td>
+                <td class="player-stat-header">S%</td>
+                <td class="player-stat-header">HP9</td>
+                <td class="player-stat-header">BB9</td>
+                <td class="player-stat-header">HR9</td>
+                <td class="player-stat-header">SO9</td>
+            </tr>
+        </thead>
+        {{range .Player.Stats}}
+            {{range .Splits}}
+                
+                <tr>
+                    <td class="player-stat">{{.Season}}</td>
+                    <td class="player-stat">
+                        {{if eq .SplitTeam.Name ""}}
+                            {{.Season}} Total
+                        {{else}}
+                            {{.SplitTeam.Name}}
+                        {{end}}
+                    </td>
+                    <td class="player-stat">{{.GamesPlayed}}</td>
+                    <td class="player-stat">{{.StrikeOuts}}</td>
+                    <td class="player-stat">{{.Hits}}</td>
+                    <td class="player-stat">{{.BaseOnBalls}}</td>
+                    <td class="player-stat">{{.HomeRuns}}</td>
+                    <td class="player-stat">{{.Obp}}</td>
+                    <td class="player-stat">{{.Ops}}</td>
+                    <td class="player-stat">{{.Slg}}</td>
+                    <td class="player-stat">{{.Avg}}</td>
+                    <td class="player-stat">{{.Era}}</td>
+                    <td class="player-stat">{{.InningsPitched}}</td>
+                    <td class="player-stat">{{.EarnedRuns}}</td>
+                    <td class="player-stat">{{.Strikes}}</td>
+                    <td class="player-stat">{{.StrikePercentage}}</td>
+                    <td class="player-stat">{{.SplitStat.HitsPer9Inn}}</td>
+                    <td class="player-stat">{{.SplitStat.WalksPer9Inn}}</td>
+                    <td class="player-stat">{{.SplitStat.HomeRunsPer9}}</td>
+                    <td class="player-stat">{{.SplitStat.StrikeoutsPer9Inn}}</td>		            
+                </tr>
+            {{end}}
+        {{end}}
+    </table>
+</body>
+</html>
+
+<style>
+    .player {
+    font-family: Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+    }
+
+    .player td, .player th {
+    border: 1px solid #ddd;
+    padding: 8px;
+    }
+
+    .player tr:nth-child(even){background-color: #f2f2f2;}
+
+    .player tr:hover {background-color: #ddd;}
+    
+    .player th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #04AA6D;
+        color: white;
+    }
+    .player thead tr:hover {background-color: black;}
+    
+    .psh{
+        color: whitesmoke;
+        background-color: black;
+    }
+    
+</style>

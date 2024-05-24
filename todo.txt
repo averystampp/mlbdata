@@ -1,0 +1,9 @@
+2. Make team builder
+3. Export to excel for team builder
+4. Fix batter rows on web and match them with Export
+    (maybe change them?)
+5. Make pitcher and batter templates and conditionaly display them
+in a the player template.
+6. Fix spaghetti code in export.go, combine pitcher and batter export?
+7. Find a way to import players into players.db with the same name. Currently
+    they get overwritten

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game</title>
+</head>
+<body>
+    <main>
+        <div class="team-header">
+            <div class="team-info">
+                <h1 class="team-name">
+                    <a href="/team/overview/{{.GameData.TeamHolder.Away.ID}}">{{.GameData.TeamHolder.Away.Name}}</a>
+                </h1>
+                <span class="team-record">{{.GameData.TeamHolder.Away.Record.Wins}}-{{.GameData.TeamHolder.Away.Record.Losses}}</span>
+                <h2>{{.LiveData.Boxscore.BoxscoreTeamHolder.Away.BoxscoreTeamStats.BoxscoreTeamBatting.Runs}}</h2>
+            </div>
+            <div>
+                <p>vs.</p>
+            </div>
+            <div>
+                <p>{{.GameData.GameStatus.DetailedState}}</p>
+            </div>
+            <div class="team-info">
+                <h1 class="team-name">
+                    <a href="/team/overview/{{.GameData.TeamHolder.Home.ID}}">{{.GameData.TeamHolder.Home.Name}}</a>
+                </h1>
+                <span class="team-record">{{.GameData.TeamHolder.Home.Record.Wins}}-{{.GameData.TeamHolder.Home.Record.Losses}}</span>
+                <h2>{{.LiveData.Boxscore.BoxscoreTeamHolder.Home.BoxscoreTeamStats.BoxscoreTeamBatting.Runs}}</h2>
+            </div>
+        </div>
+        
+        <!-- pitcher data -->
+
+        <!-- get pitchers that are playing/played. If none have been declared  -->
+        <!-- then use the probable pitcher  -->
+        {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers) 0}}
+            <div>
+                {{$pitcher := pitchers .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers}}   
+                {{range $p := $pitcher}}
+                    {{$p.FullName}}
+                {{end}}
+            </div>
+        {{else}}
+            <div>
+                {{.GameData.ProbablePitcher.Away}}
+            </div>
+        {{end}}
+        
+        {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers) 0}}
+            <div>
+                {{$pitcher := pitchers .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers}}   
+                {{range $p := $pitcher}}    
+                    {{$p.FullName}}
+                {{end}}
+            </div>
+        {{else}}
+            <div>
+                {{.GameData.ProbablePitcher.Home}}
+            </div>
+        {{end}}
+
+        <!-- batter data -->
+        </div>
+            <!-- batters from away team -->
+            <div>
+                {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder) 0}}
+                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder}}
+                    <table>
+                        <thead>
+                            <tr>
+                                <td>Order</td>
+                                <td>Name</td>
+                                <td>AVG</td>
+                                <td>OBP</td>
+                                <td>OPS</td>
+                            </tr>
+                        </thead>
+                        {{range $i, $p := $b}}
+                            <tr>
+                                <td>{{add $i 1}}</td>
+                                <td>{{$p.FullName}}</td>
+                                {{range $p.Stats}}
+                                    {{range .Splits}}
+                                        <td>{{.Avg}}</td>
+                                        <td>{{.Obp}}</td>
+                                        <td>{{.Ops}}</td>
+                                    {{end}}
+                                {{end}}
+                            </tr>
+                        {{end}}
+                    </table>
+                {{else}}
+                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Away.Bench}}
+                <p>The {{.GameData.TeamHolder.Away.Name}} have not declared a lineup</p>
+                <table>
+                    <thead>
+                        <tr> 
+                            <td>Name</td>
+                            <td>AVG</td>
+                            <td>OBP</td>
+                            <td>OPS</td>
+                        </tr>
+                    </thead>
+                    {{range $i, $p := $b}}
+                        <tr>
+                            <td>{{$p.FullName}}</td>
+                            {{range $p.Stats}}
+                                {{range .Splits}}
+                                    <td>{{.Avg}}</td>
+                                    <td>{{.Obp}}</td>
+                                    <td>{{.Ops}}</td>
+                                {{end}}
+                            {{end}}
+                        </tr>
+                    {{end}}
+                </table>
+                {{end}}
+            </div>
+
+            <!-- batters at home -->
+            <div>
+                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Home.BattingOrder}}
+                <table>
+                    <thead>
+                        <tr>
+                            <td>Order</td>
+                            <td>Name</td>
+                            <td>AVG</td>
+                            <td>OBP</td>
+                            <td>OPS</td>
+                        </tr>
+                    </thead>
+                    {{range $i, $p := $b}}
+                        <tr>
+                            <td>{{add $i 1}}</td>
+                            <td>{{$p.FullName}}</td>
+                            {{range $p.Stats}}
+                                {{range .Splits}}
+                                    <td>{{.Avg}}</td>
+                                    <td>{{.Obp}}</td>
+                                    <td>{{.Ops}}</td>
+                                {{end}}
+                            {{end}}
+                        </tr>
+                    {{end}}
+                </table>    
+            </div>
+        </div>
+    </main>
+    
+</body>
+</html>
+
+<style>
+    .team-header{
+        padding: 10px;
+        margin: 10px;
+        justify-content: center;
+        border: 1px solid black;
+        align-items: center;
+        display: flex;
+    }
+
+    .team-info{
+        margin: 10px;
+        text-align: center;
+    }
+    .team-name{
+        margin: 0px;
+    }
+    .team-record{
+        font-size: 15px;
+        color: lightslategray;
+    }
+</style>

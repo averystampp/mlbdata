@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Team.Name}}</title>
+</head>
+<body>
+    <a href="/">Home</a>
+    <a href="/team/schedule/{{.Team.ID}}">Schedule</a>
+    
+    <h1>{{.Team.Name}}</h1>
+    <div class="game-holder" >
+        {{range .Games.Dates}}
+            {{range .Games}}
+                <div class="game-cards">
+                    <p>{{time .GameDate}}</p>
+                    <a href="/game/{{.GamePk}}">{{.GameTeamHolder.Away.Name}} @ {{.GameTeamHolder.Home.Name}}</a>
+                    
+                </div>
+            {{end}}
+        {{end}}
+    </div>
+    <h3>{{.Team.Name}} Roster</h3>
+    {{range .Players}}
+        <div>
+            <a href="/player/stats/{{.ID}}">{{.FullName}}</a> <span class="pos-name">{{.Position.Name}}</span>
+        </div>
+    {{end}}
+</body>
+</html>
+
+
+<style>
+    .pos-name{
+        font-size: small;
+        color: lightslategrey;
+    }
+    .game-holder{
+        display: flex;
+    }
+    .game-cards{
+        font-size: 12px;
+        max-height: 8rem;
+        padding: 3px;
+        margin: 5px;
+        border: 1px solid black;
+    }
+</style>
