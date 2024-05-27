@@ -16,10 +16,17 @@
                 <h2>{{.LiveData.Boxscore.BoxscoreTeamHolder.Away.BoxscoreTeamStats.BoxscoreTeamBatting.Runs}}</h2>
             </div>
             <div>
-                <p>vs.</p>
             </div>
-            <div>
-                <p>{{.GameData.GameStatus.DetailedState}}</p>
+            <div class="game-status">
+                <p>vs.</p>
+                {{if eq .GameData.GameStatus.StatusCode "I"}}
+                    <p>{{.LiveData.LineScore.InningState}} of the {{.LiveData.LineScore.CurrentInningOrdinal}}</p>
+                        
+                {{else if eq .GameData.GameStatus.StatusCode "F"}}
+                    <p>{{.GameData.GameStatus.DetailedState}}</p>
+                {{else}}
+                    <p>{{localTime .GameData.GameDate.DateTime}}</p>    
+                {{end}}
             </div>
             <div class="team-info">
                 <h1 class="team-name">
@@ -34,118 +41,81 @@
 
         <!-- get pitchers that are playing/played. If none have been declared  -->
         <!-- then use the probable pitcher  -->
-        {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers) 0}}
+        <!-- we have pitchers, zero index is starting and the len-1 is the current pitcher index -->
+
+        <!-- game must be in progess or pre gram to display pitchers, other wise just show used bullpen -->
+        {{if ne .GameData.GameStatus.StatusCode "F"}}
             <div>
-                {{$pitcher := pitchers .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers}}   
-                {{range $p := $pitcher}}
-                    {{$p.FullName}}
-                {{end}}
-            </div>
-        {{else}}
-            <div>
-                {{.GameData.ProbablePitcher.Away}}
+                <!-- away pitcher -->
+                <div class="current-pitcher-holder">
+                    <div>
+                        {{if gt (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers) 0}}
+                            <div class="pitcher-data">
+                                <h4>Pitching for the {{.GameData.TeamHolder.Away.Name}}</h4>
+                                {{template "pitcher" .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers}}
+                            </div>
+                        {{else}}
+                            <div class="pitcher-data">
+                                <h4>Probable pitcher for the {{.GameData.TeamHolder.Away.Name}}</h4>
+                                {{template "probable" .GameData.ProbablePitcher.Away}}
+                            </div>
+                        {{end}}
+                    </div>
+
+                    <!-- home pitcher -->
+                    <div>
+                        {{if gt (len .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers) 0}}  
+                            <div class="pitcher-data">
+                                <h4>Pitching for the {{.GameData.TeamHolder.Home.Name}}</h4>
+                                {{template "pitcher" .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers}}
+                            </div>      
+                        {{else}}
+                            <div class="pitcher-data">
+                                <h4>Probable pitcher for the {{.GameData.TeamHolder.Home.Name}}</h4>
+                                {{template "probable" .GameData.ProbablePitcher.Home}}
+                            </div>
+                        {{end}}
+                    </div>
+                </div>
             </div>
         {{end}}
         
-        {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers) 0}}
-            <div>
-                {{$pitcher := pitchers .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers}}   
-                {{range $p := $pitcher}}    
-                    {{$p.FullName}}
-                {{end}}
-            </div>
-        {{else}}
-            <div>
-                {{.GameData.ProbablePitcher.Home}}
-            </div>
+        {{if gt (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers) 1}}
+            <h4>Spent Pitchers for the {{.GameData.TeamHolder.Away.Name}}</h4>
+            {{template "pastPtchrs" pastPitchers .LiveData.Boxscore.BoxscoreTeamHolder.Away.Pitchers .GameData.GameInfo.Pk .GameData.GameStatus.StatusCode}}
+        {{end}}
+            
+        {{if gt (len .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers) 1}}
+            <h4>Spent Pitchers for the {{.GameData.TeamHolder.Home.Name}}</h4>
+            {{template "pastPtchrs" pastPitchers .LiveData.Boxscore.BoxscoreTeamHolder.Home.Pitchers .GameData.GameInfo.Pk .GameData.GameStatus.StatusCode}}
         {{end}}
 
+        
+
+        
+        
+
+
         <!-- batter data -->
-        </div>
+        <div>
             <!-- batters from away team -->
-            <div>
-                {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder) 0}}
-                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder}}
-                    <table>
-                        <thead>
-                            <tr>
-                                <td>Order</td>
-                                <td>Name</td>
-                                <td>AVG</td>
-                                <td>OBP</td>
-                                <td>OPS</td>
-                            </tr>
-                        </thead>
-                        {{range $i, $p := $b}}
-                            <tr>
-                                <td>{{add $i 1}}</td>
-                                <td>{{$p.FullName}}</td>
-                                {{range $p.Stats}}
-                                    {{range .Splits}}
-                                        <td>{{.Avg}}</td>
-                                        <td>{{.Obp}}</td>
-                                        <td>{{.Ops}}</td>
-                                    {{end}}
-                                {{end}}
-                            </tr>
-                        {{end}}
-                    </table>
-                {{else}}
-                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Away.Bench}}
-                <p>The {{.GameData.TeamHolder.Away.Name}} have not declared a lineup</p>
-                <table>
-                    <thead>
-                        <tr> 
-                            <td>Name</td>
-                            <td>AVG</td>
-                            <td>OBP</td>
-                            <td>OPS</td>
-                        </tr>
-                    </thead>
-                    {{range $i, $p := $b}}
-                        <tr>
-                            <td>{{$p.FullName}}</td>
-                            {{range $p.Stats}}
-                                {{range .Splits}}
-                                    <td>{{.Avg}}</td>
-                                    <td>{{.Obp}}</td>
-                                    <td>{{.Ops}}</td>
-                                {{end}}
-                            {{end}}
-                        </tr>
-                    {{end}}
-                </table>
-                {{end}}
-            </div>
+            {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder) 0}}
+                <h3>{{.GameData.TeamHolder.Away.Name}} Batting Order</h3>
+                {{template "lineup" .LiveData.Boxscore.BoxscoreTeamHolder.Away.BattingOrder}}
+            {{else}}
+                <p>{{.GameData.TeamHolder.Away.Name}} Have not decalared a lineup</p>
+                {{template "lineup" .LiveData.Boxscore.BoxscoreTeamHolder.Away.Bench}}
+            {{end}}
 
             <!-- batters at home -->
-            <div>
-                {{$b := batters .LiveData.Boxscore.BoxscoreTeamHolder.Home.BattingOrder}}
-                <table>
-                    <thead>
-                        <tr>
-                            <td>Order</td>
-                            <td>Name</td>
-                            <td>AVG</td>
-                            <td>OBP</td>
-                            <td>OPS</td>
-                        </tr>
-                    </thead>
-                    {{range $i, $p := $b}}
-                        <tr>
-                            <td>{{add $i 1}}</td>
-                            <td>{{$p.FullName}}</td>
-                            {{range $p.Stats}}
-                                {{range .Splits}}
-                                    <td>{{.Avg}}</td>
-                                    <td>{{.Obp}}</td>
-                                    <td>{{.Ops}}</td>
-                                {{end}}
-                            {{end}}
-                        </tr>
-                    {{end}}
-                </table>    
-            </div>
+            {{if ne (len .LiveData.Boxscore.BoxscoreTeamHolder.Home.BattingOrder) 0}}
+                <h3>{{.GameData.TeamHolder.Home.Name}} Batting Order</h3>
+                {{template "lineup" .LiveData.Boxscore.BoxscoreTeamHolder.Home.BattingOrder}}
+            {{else}}
+                <p>{{.GameData.TeamHolder.Home.Name}} Have not decalared a lineup</p>
+                {{template "lineup" .LiveData.Boxscore.BoxscoreTeamHolder.Home.Bench}}
+            {{end}}
+           
         </div>
     </main>
     
@@ -155,7 +125,6 @@
 <style>
     .team-header{
         padding: 10px;
-        margin: 10px;
         justify-content: center;
         border: 1px solid black;
         align-items: center;
@@ -172,5 +141,22 @@
     .team-record{
         font-size: 15px;
         color: lightslategray;
+    }
+    .current-pitcher-holder{
+        margin-top: 1rem;
+        justify-content: center;
+        display: flex;
+        padding: 15px;
+        max-width: 100%;
+        border: 1px solid black;
+    }
+
+    .pitcher-data {
+        text-align: center;
+    }
+
+    .game-status{
+        text-align: center;
+        margin: 18px;
     }
 </style>

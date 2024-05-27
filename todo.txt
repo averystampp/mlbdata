@@ -7,3 +7,17 @@ in a the player template.
 6. Fix spaghetti code in export.go, combine pitcher and batter export?
 7. Find a way to import players into players.db with the same name. Currently
     they get overwritten
+
+
+
+
+fantasy lineup style team builder
+
+1. -> Name the team e.g. Week 18 Draft 2024
+    2. -> Pick players 
+    3. -> Stay under salary cap if applicable
+    4. Score points based off applicable league settings common ones are
+        - +HR
+        - +RBI
+        - -ER
+        

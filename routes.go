@@ -26,6 +26,7 @@ func StartMLBService(rtr *sesame.Router) {
 	rtr.Get("/player/search/name", PlayerResponseRoute)
 	rtr.Get("/game/{game}", GameRoute)
 	rtr.Get("/team/schedule/{id}", TeamGames)
+	rtr.Get("/help", helper)
 
 	rtr.Post("/player/export", ExportPlayerData)
 
@@ -268,10 +269,15 @@ func PlayerResponseRoute(ctx sesame.Context) error {
 func GameRoute(ctx sesame.Context) error {
 	gameId := ctx.Request().PathValue("game")
 	tmpl, err := template.New("game.html").Funcs(template.FuncMap{
-		"pitchers": retrievePitcher,
-		"batters":  retrieveBatters,
-		"add":      addNums,
-	}).ParseFiles("../pages/game.html")
+		"pitchers":     retrievePitcher,
+		"batters":      retrieveBatters,
+		"add":          addNums,
+		"sub":          subNums,
+		"onePitcher":   singlePitcher,
+		"pastPitchers": playerGameStats,
+		"era":          calculateERA,
+		"localTime":    localTime,
+	}).ParseFiles("../pages/game.html", "../components/game_batter.html", "../components/game_pitcher.html")
 	if err != nil {
 		return err
 	}
@@ -302,9 +308,34 @@ func TeamGames(ctx sesame.Context) error {
 		return err
 	}
 
-	tmpl, err := template.ParseFiles("../pages/teamgames.html")
+	tmpl, err := template.New("teamgames.html").Funcs(template.FuncMap{
+		"time": func(t time.Time) string {
+			t = t.In(time.Local)
+			y, m, d := t.Date()
+
+			return fmt.Sprintf("%s %d, %d", m.String(), d, y) + " " + t.Format(time.Kitchen)
+		},
+	}).ParseFiles("../pages/teamgames.html")
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(ctx.Response(), games)
+	var data = struct {
+		Data   GameDay
+		TeamID string
+	}{
+		Data:   games,
+		TeamID: id,
+	}
+
+	return tmpl.Execute(ctx.Response(), data)
+}
+
+func helper(ctx sesame.Context) error {
+	ls := []int{434378, 650556, 519151, 623352}
+
+	pp := playerGameStats(ls, 745663, "")
+	for _, p := range pp {
+		fmt.Println(p)
+	}
+	return nil
 }
