@@ -7,24 +7,19 @@
 </head>
 <body>
     {{len .Pitchers}} {{len .Batters}}
-
-    <div class="team-info">
-        {{.Team}}
-
-    </div>
-
-    <div class="players">
-        <div class="pitchers">
-            <h2>Pitchers</h2>
-            {{template "pitchers" .Pitchers}}
+    <main>
+        <div class="players">
+            <div class="pitchers">
+                <h2>Pitchers</h2>
+                {{template "pitchers" .Pitchers}}
+            </div>
+    
+            <div class="batters">
+                <h2>Batters</h2>    
+                {{template "batters" .Batters}}
+            </div>
         </div>
-
-        <div class="batters">
-            <h2>Batters</h2>
-            
-            {{template "batters" .Batters}}
-        </div>
-    </div>
+    </main>
 </body>
 </html>
 
@@ -32,31 +27,21 @@
     .players{
         justify-content: center;
         align-items: center;
-        display: flex;
         border: 1px black solid;
     }
     .pitchers{
         border: 1px black solid;
-        margin: 4rem;
+        margin: 1rem;
         padding: 2rem;
     }
     .batters{
         border: 1px black solid;
-        margin: 4rem;
         padding: 2rem;
-    }
-
-    .pitchers h2 {
-        text-align: center;
-    }
-    .batters h2 {
-        text-align: center;
     }
 </style>
 
-
-
 {{define "pitchers"}}
+    
     <table class="pitcher-table">
         <tr>
             <th>Name</th>
@@ -66,16 +51,16 @@
             <th>WHIP</th>
         </tr>
         {{range .}}
+            {{$team := .CurrentTeam.Name}}
             {{if ne (len .Stats) 0}}
             <tr>
-                <td><a href="">{{.FullName}}</a></td>
+                <td><a href="/pitcher/{{.ID}}">{{.FullName}}</a></td>
                 <td>{{.PrimaryPosition.Type}}</td>
                 {{range .Stats}}
-                    {{range .Splits}}
-                        <td>{{.InningsPitched}}</td>
-                        <td>{{.Era}}</td>
-                        <td>{{.Whip}}</td>        
-                    {{end}}
+                    {{$s := index .Splits 0}}
+                        <td>{{$s.InningsPitched}}</td>
+                        <td>{{$s.Era}}</td>
+                        <td>{{$s.Whip}}</td>  
                 {{end}}
             </tr>
             {{end}}

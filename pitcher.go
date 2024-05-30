@@ -181,8 +181,11 @@ type PitchingStats struct {
 	SacFlies               int    `json:"sacFlies"`
 }
 
-func GetOnePitcherData(id string) (Pitcher, error) {
-	resp, err := http.Get(fmt.Sprintf(BASE+"people/%s/?hydrate=stats(group=[pitching],type=[yearByYear,career]),currentTeam", id))
+// yearByYear,career
+func GetOnePitcherData(id string, span string, season string) (Pitcher, error) {
+	fmt.Println(season)
+	fmt.Println(fmt.Sprintf(BASE+"people/%s/?hydrate=stats(group=[pitching],type=[%s],seasons=%s),currentTeam", id, span, season))
+	resp, err := http.Get(fmt.Sprintf(BASE+"people/%s/?hydrate=stats(group=[pitching],type=[%s],seasons=[%s]),currentTeam", id, span, season))
 	if err != nil {
 		return Pitcher{}, err
 	}
