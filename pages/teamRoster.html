@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roster</title>
+</head>
+<body>
+    {{len .Pitchers}} {{len .Batters}}
+
+    <div class="team-info">
+        {{.Team}}
+
+    </div>
+
+    <div class="players">
+        <div class="pitchers">
+            <h2>Pitchers</h2>
+            {{template "pitchers" .Pitchers}}
+        </div>
+
+        <div class="batters">
+            <h2>Batters</h2>
+            
+            {{template "batters" .Batters}}
+        </div>
+    </div>
+</body>
+</html>
+
+<style>
+    .players{
+        justify-content: center;
+        align-items: center;
+        display: flex;
+        border: 1px black solid;
+    }
+    .pitchers{
+        border: 1px black solid;
+        margin: 4rem;
+        padding: 2rem;
+    }
+    .batters{
+        border: 1px black solid;
+        margin: 4rem;
+        padding: 2rem;
+    }
+
+    .pitchers h2 {
+        text-align: center;
+    }
+    .batters h2 {
+        text-align: center;
+    }
+</style>
+
+
+
+{{define "pitchers"}}
+    <table class="pitcher-table">
+        <tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>IP</th>
+            <th>ERA</th>
+            <th>WHIP</th>
+        </tr>
+        {{range .}}
+            {{if ne (len .Stats) 0}}
+            <tr>
+                <td><a href="">{{.FullName}}</a></td>
+                <td>{{.PrimaryPosition.Type}}</td>
+                {{range .Stats}}
+                    {{range .Splits}}
+                        <td>{{.InningsPitched}}</td>
+                        <td>{{.Era}}</td>
+                        <td>{{.Whip}}</td>        
+                    {{end}}
+                {{end}}
+            </tr>
+            {{end}}
+        {{end}}
+    </table>
+
+    <style>
+        .pitcher-table{
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .pitcher-table th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: black;
+            color: white;
+            position: static;
+            text-align: center;
+            border: 1px solid #ddd;        
+        }
+        .pitcher-table td {
+            border: 1px solid #ddd;
+            padding: 18px;
+            padding-left: 1rem;
+            margin: 15px;
+        }
+    </style>
+{{end}}
+
+
+
+{{define "batters"}}
+    <table class="batter-table">
+        <tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>AVG</th>
+            <th>OBP</th>
+            <th>OPS</th>
+            <th>HR</th>
+        </tr>
+        {{range .}}
+            {{if ne (len .Stats) 0}}
+            <tr>
+                <td>{{.FullName}}</td>
+                <td>{{.PrimaryPosition.Name}}</td>
+                {{range .Stats}}
+                    {{range .Splits}}
+                        <td>{{.Avg}}</td>
+                        <td>{{.Obp}}</td>
+                        <td>{{.Ops}}</td>        
+                        <td>{{.HomeRuns}}</td>        
+                    {{end}}
+                {{end}}
+            </tr>
+            {{end}}
+        {{end}}
+    </table>
+
+    <style>
+        .batter-table{
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .batter-table th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: black;
+            color: white;
+            position: static;
+            text-align: center;
+            border: 1px solid #ddd;        
+        }
+        .batter-table td {
+            border: 1px solid #ddd;
+            padding: 18px;
+            padding-left: 1rem;
+            margin: 15px;
+        }
+    </style>
+{{end}}
+

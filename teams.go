@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 )
 
 func AllMLBTeams() ([]Team, error) {
@@ -49,43 +48,30 @@ func TeambyID(id string) (Team, error) {
 	return team.Team[0], nil
 }
 
-func Roster(id string) ([]Player, error) {
+func Roster(id string) ([]FortyManSearch, []FortyManSearch, error) {
 	resp, err := http.Get(BASE + fmt.Sprintf("teams/%s/roster?rosterType=40Man", id))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var roster = struct {
-		Copyright string   `json:"copyright"`
-		Roster    []Player `json:"roster"`
+		Copyright string           `json:"copyright"`
+		Roster    []FortyManSearch `json:"roster"`
 	}{}
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(b, &roster)
-	if err != nil {
-		return nil, err
-	}
-	return roster.Roster, nil
-}
 
-func GetGames(id, start, end string) (GameDay, error) {
-	if start == "" || end == "" {
-		start = time.Now().Format(time.DateOnly)
-		end = time.Now().Format(time.DateOnly)
-	}
-	full := fmt.Sprintf(BASE+"schedule?sportId=1&startDate=%s&endDate=%s&teamId=%s", start, end, id)
-	resp, err := http.Get(full)
+	err = json.NewDecoder(resp.Body).Decode(&roster)
 	if err != nil {
-		return GameDay{}, err
+		return nil, nil, err
 	}
 
-	var gd GameDay
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&gd)
-	if err != nil {
-		return GameDay{}, err
+	var pitchers []FortyManSearch
+	var batters []FortyManSearch
+	for _, player := range roster.Roster {
+		if player.Position.Code == "1" {
+			pitchers = append(pitchers, player)
+		} else {
+			batters = append(batters, player)
+		}
 	}
 
-	return gd, nil
+	return pitchers, batters, nil
 }
