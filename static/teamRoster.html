@@ -6,8 +6,11 @@
     <title>Roster</title>
 </head>
 <body>
-    {{len .Pitchers}} {{len .Batters}}
     <main>
+        <div class="team-info">
+            {{template "team-info" .}}
+        </div>
+
         <div class="players">
             <div class="pitchers">
                 <h2>Pitchers</h2>
@@ -35,13 +38,36 @@
         padding: 2rem;
     }
     .batters{
+        margin: 1rem;
         border: 1px black solid;
         padding: 2rem;
     }
 </style>
 
+{{define "team-info"}}
+    <div class="team-header">
+        <h1>{{.Team.Name}}</h1>
+        <p><b>{{.Record.Wins}}-{{.Record.Losses}}</b></p>
+    </div>
+
+    <style>
+        .team-header{
+            justify-content: center;
+            align-items: center;
+            justify-items: center;
+            display: inline;
+            text-align: center;
+        }
+
+        .team-header h1 {
+            margin: .75rem;
+            font-size: 3rem;
+        }
+    </style>
+
+{{end}}
+
 {{define "pitchers"}}
-    
     <table class="pitcher-table">
         <tr>
             <th>Name</th>
@@ -92,35 +118,40 @@
     </style>
 {{end}}
 
-
-
 {{define "batters"}}
-    <table class="batter-table">
-        <tr>
-            <th>Name</th>
-            <th>Position</th>
-            <th>AVG</th>
-            <th>OBP</th>
-            <th>OPS</th>
-            <th>HR</th>
-        </tr>
-        {{range .}}
-            {{if ne (len .Stats) 0}}
+    <div class="batter-data">
+        <table class="batter-table">
             <tr>
-                <td>{{.FullName}}</td>
-                <td>{{.PrimaryPosition.Name}}</td>
-                {{range .Stats}}
-                    {{range .Splits}}
-                        <td>{{.Avg}}</td>
-                        <td>{{.Obp}}</td>
-                        <td>{{.Ops}}</td>        
-                        <td>{{.HomeRuns}}</td>        
-                    {{end}}
-                {{end}}
+                <th>Name</th>
+                <th>Position</th>
+                <th>AVG</th>
+                <th>OBP</th>
+                <th>OPS</th>
+                <th>HR</th>
+                <th>AB</th>
+                <th>PA</th>
             </tr>
+            {{range .}}
+                {{if ne (len .Stats) 0}}
+                <tr>
+                    <td><a href="/batter/{{.ID}}">{{.FullName}}</a></td>
+                    <td>{{.PrimaryPosition.Name}}</td>
+                    {{range .Stats}}
+                        {{range .Splits}}
+                            <td>{{.Avg}}</td>
+                            <td>{{.Obp}}</td>
+                            <td>{{.Ops}}</td>        
+                            <td>{{.HomeRuns}}</td>        
+                            <td>{{.AtBats}}</td>        
+                            <td>{{.PlateAppearances}}</td>        
+                        {{end}}
+                    {{end}}
+                </tr>
+                {{end}}
             {{end}}
-        {{end}}
-    </table>
+        </table>
+
+    </div>
 
     <style>
         .batter-table{

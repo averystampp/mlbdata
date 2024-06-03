@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Data.FullName}}</title>
+</head>
+<body>
+    {{template "navbar"}}
+
+    {{if eq .PlayerType "pitcher"}}
+        {{template "pitcher-data" .}}
+    {{else}}
+        {{template "batter-data" .}}
+    {{end}}
+</body>
+</html>
+
+
+{{define "batter-data"}}
+    <div>
+        {{template "info" .Data}}
+    </div>
+
+    <div>
+        {{template "batter-stats" .Data}}
+    </div>
+
+    <div>
+        {{template "export" .Data}}
+    </div>
+
+{{end}}
+
+{{define "batter-stats"}}
+    {{$player := .}}
+    <div class="player-stat-holder">
+        <table class="player-stats">
+            <tr>
+                <th>Team</th>
+                <th>Season</th>
+                <th>G</th>
+                <th>AB</th>
+                <th>PA</th>
+                <th>AVG</th>
+                <th>BABIP</th>
+                <th>OBP</th>
+                <th>SLG</th>
+                <th>OPS</th>
+                <th>SO</th>
+                <th>BB</th>
+                <th>H</th>
+                <th>2B</th>
+                <th>3B</th>
+                <th>HR</th>
+                <th>RBI</th>
+                <th>SB</th>
+                <th>CS</th>
+            </tr>
+            {{range $stats := .Stats}}
+                {{range $spl := $stats.Splits}}
+                    <tr>
+                        {{if eq .Team.Name ""}}
+                            <td>{{$spl.Season}} Total</td>
+                        {{else}}
+                            <td><a href="/team/{{$spl.Team.ID}}">{{$spl.Team.Name}}</a></td>
+                        {{end}}
+                        <td>{{$spl.Season}}</td>
+                        <td>{{$spl.GamesPlayed}}</td>
+                        <td>{{$spl.AtBats}}</td>
+                        <td>{{$spl.PlateAppearances}}</td>
+                        <td>{{$spl.Avg}}</td>
+                        <td>{{$spl.Babip}}</td>
+                        <td>{{$spl.Obp}}</td>
+                        <td>{{$spl.Slg}}</td>
+                        <td>{{$spl.Ops}}</td>
+                        <td>{{$spl.StrikeOuts}}</td>
+                        <td>{{$spl.BaseOnBalls}}</td>
+                        <td>{{$spl.Hits}}</td>
+                        <td>{{$spl.Doubles}}</td>
+                        <td>{{$spl.Triples}}</td>
+                        <td>{{$spl.HomeRuns}}</td>
+                        <td>{{$spl.Rbi}}</td>
+                        <td>{{$spl.StolenBases}}</td>
+                        <td>{{$spl.CaughtStealing}}</td>
+                    </tr>
+                {{end}}
+            {{end}}
+            <tr>
+            </tr>
+        </table>
+    </div>
+    <style>
+        .player-stat-holder{
+            width: 100%;
+            border: 1px solid black;
+        }
+
+        .player-stats{
+                table-layout: auto;
+                font-family: Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                width: 100%;
+            }
+        .player-stats th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                background-color: black;
+                color: white;
+                position: static;
+                text-align: center;
+                border: 1px solid #ddd;        
+            }
+        .player-stats td {
+                padding: .5rem;
+                /* word-break: break-all; */
+                border: 1px solid #ddd;
+            }
+    </style>
+{{end}}
+
+
+
+{{define "info"}}
+    <div class="player-info-holder">
+        <div class="player-info">
+            <div>
+                <h2 class="player-name">{{.FullName}}</h2>
+                <h4 class="player-pos">{{.PrimaryPosition.Name}}, #{{.PrimaryNumber}}</h4>
+            </div>
+            <ul class="player-info-list">
+                <li><b>Age:</b> {{.CurrentAge}}</li>
+                <li><b>Birthday:</b> {{.BirthDate}}</li>
+                <li><b>Birthplace:</b> {{.BirthCity}}, {{.BirthCountry}}</li>
+                <li><b>Height:</b> {{.Height}}</li>
+                <li><b>Weight:</b> {{.Weight}}</li>
+                <li><b>Debut:</b> {{.MlbDebutDate}}</li>
+                <li><b>Throws:</b> {{.PitchHand.Description}}</li>
+
+            </ul>
+        </div>
+        <div>
+            <div class="player-current-team">
+                <b>Current Team</b>
+                <h3><a href="/team/{{.CurrentTeam.ID}}">{{.CurrentTeam.Name}}</a></h3>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .player-name{
+            margin-bottom: 0;
+        }
+        .player-pos{
+            margin-top: 4px;
+        }
+        .player-info-holder{
+            display: flex;
+            padding: 1rem;
+            margin: 1rem;
+            border: 1px solid black;
+        }
+        .player-info{
+            border: 1px solid black;
+            text-align: start;
+            padding: 1rem;
+            justify-content: start;
+            display: flex;
+        }
+        .player-info-list {
+            list-style: none;
+        }
+        .player-info-list li{
+            margin: 1rem;
+        }
+
+        .player-current-team{
+            margin-left: 2rem;
+            padding: 1rem;
+            border: 1px black solid;
+        }
+    </style>
+{{end}}
+
+
+
+{{define "export"}}
+    {{if eq .PrimaryPosition.Name "Pitcher"}}
+        <div class="data-exports">
+            <div class="seasonal-data">
+                <h4>Seasonal Data</h4>
+                <form action="/export/pitcher/seasonal/{{.ID}}" method="post">
+                    <div class="seasons">
+                        {{$s := removeDups .}}
+                        {{range $s}}
+                            <p>{{.}} <input type="checkbox" name="season" value="{{.}}"></p>    
+                        {{end}}
+                    </div>
+                    <input type="submit">
+                    <select name="exportType" required>
+                        <option value="xlsx">Excel File</option>
+                        <option value="json">JSON File</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                    <input type="text" hidden value="season" name="span">
+                </form>    
+            </div>
+            <div class="other-data">
+                <h4>Export Career Data</h4>
+                <form action="/export/pitcher/career/{{.ID}}" method="post">
+                    <select name="exportType" required>
+                        <option value="xlsx">Excel File</option>
+                        <option value="json">JSON File</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                    <input type="submit" value="Career Pitching Data">
+                </form>
+            </div>
+        </div>
+    {{else}}
+    <div class="data-exports">
+        <div class="seasonal-data">
+            <h4>Seasonal Data</h4>
+            <form action="/export/batter/seasonal/{{.ID}}" method="post">
+                <div class="seasons">
+                    {{$s := removeDupsBatter .}}
+                    {{range $s}}
+                        <p>{{.}} <input type="checkbox" name="season" value="{{.}}"></p>    
+                    {{end}}
+                </div>
+                <input type="submit">
+                <select name="exportType" required>
+                    <option value="xlsx">Excel File</option>
+                    <option value="json">JSON File</option>
+                    <option value="csv">CSV</option>
+                </select>
+                <input type="text" hidden value="season" name="span">
+            </form>    
+        </div>
+        <div class="other-data">
+            <h4>Export Career Data</h4>
+            <form action="/export/batter/career/{{.ID}}" method="post">
+                <select name="exportType" required>
+                    <option value="xlsx">Excel File</option>
+                    <option value="json">JSON File</option>
+                    <option value="csv">CSV</option>
+                </select>
+                <input type="submit" value="Career Batting Data">
+            </form>
+        </div>
+    </div>
+
+    {{end}}
+
+    <style>
+        .other-data{
+            border: solid black 1px;
+            padding: 1rem;
+            margin-left: 1rem;
+        }
+        .seasonal-data{
+            border: solid black 1px;
+            width: 30%;
+            padding: 1rem;
+        }
+        .seasonal-data p {
+            margin: 5px;
+        }
+        .seasons{
+            gap: 1px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .data-exports{
+            border: 1px solid black;
+            margin: 1rem;
+            padding: 1rem;
+            display: flex;
+        }
+    </style>
+{{end}}

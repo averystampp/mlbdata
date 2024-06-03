@@ -1,0 +1,158 @@
+{{define "pitcher-data"}}
+    <div>
+        {{template "info" .Data}}
+    </div>
+    <div >
+        {{template "pitcher-stats" .Data}}
+    </div>
+
+    <div>
+        {{template "pitcher-metrics" .Metrics}}
+    </div>
+
+    <div>
+        {{template "export" .Data}}
+    </div>
+{{end}}
+
+{{define "pitcher-stats"}}
+    {{$player := .}}
+    <div class="player-stat-holder">
+        <table class="player-stats">
+            <tr>
+                <th>Team</th>
+                <th>Season</th>
+                <th>G</th>
+                <th>IP</th>
+                <th>NOP</th>
+                <th>BF</th>
+                <th>ERA</th>
+                <th>HR</th>
+                <th>WHIP</th>
+                <th>AVG</th>
+                <th>OBP</th>
+                <th>SLG</th>
+                <th>OPS</th>
+                <th>SO9</th>
+                <th>WP9</th>
+                <th>HP9</th>
+                <th>RP9</th>
+                <th>HRP9</th>
+            </tr>
+            {{range $stats := .Stats}}
+                {{range $spl := $stats.Splits}}
+                    <tr>
+                        {{if eq .Team.Name ""}}
+                            <td>{{$spl.Season}} Total</td>
+                        {{else}}
+                            <td><a href="/team/{{$spl.Team.ID}}">{{$spl.Team.Name}}</a></td>
+                        {{end}}
+                        <td>{{$spl.Season}}</td>
+                        <td>{{$spl.GamesPlayed}}</td>
+                        <td>{{$spl.InningsPitched}}</td>
+                        <td>{{$spl.NumberOfPitches}}</td>
+                        <td>{{$spl.BattersFaced}}</td>
+                        <td>{{$spl.Era}}</td>
+                        <td>{{$spl.HomeRuns}}</td>
+                        <td>{{$spl.Whip}}</td>
+                        <td>{{$spl.Avg}}</td>
+                        <td>{{$spl.Obp}}</td>
+                        <td>{{$spl.Slg}}</td>
+                        <td>{{$spl.Ops}}</td>
+                        <td>{{$spl.StrikeoutsPer9Inn}}</td>
+                        <td>{{$spl.WalksPer9Inn}}</td>
+                        <td>{{$spl.HitsPer9Inn}}</td>
+                        <td>{{$spl.RunsScoredPer9}}</td>
+                        <td>{{$spl.HomeRunsPer9}}</td>
+                    </tr>
+                {{end}}
+            {{end}}
+            <tr>
+            </tr>
+        </table>
+    </div>
+    <style>
+        .player-stat-holder{
+            width: 100%;
+            border: 1px solid black;
+        }
+
+        .player-stats{
+                table-layout: auto;
+                font-family: Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                width: 100%;
+            }
+        .player-stats th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                background-color: black;
+                color: white;
+                position: static;
+                text-align: center;
+                border: 1px solid #ddd;        
+            }
+        .player-stats td {
+                padding: .5rem;
+                /* word-break: break-all; */
+                border: 1px solid #ddd;
+            }
+    </style>
+{{end}}
+
+{{define "pitcher-metrics"}}
+    <div>
+        <h4>Pithcing Metrics</h4>
+        <table class="pitcher-metrics">
+            <tr>
+                <th>Pitch</th>
+                <th>Pitch Count</th>
+                <th>Max Spin Rate</th>
+                <th>Min Spin Rate</th>
+                <th>Avg Spin Rate</th>
+                <th>Max Pitch Speed</th>
+                <th>Min Pitch Speed</th>
+                <th>Avg Pitch Speed</th>
+
+            </tr> 
+            {{range $k, $v := metrics .}}
+                {{if ne $k ""}}
+                    <tr>
+                        <td>{{$k}}</td>
+                        <td>{{(index $v 0).PitchCount}}</td>
+                        {{range $v}}
+                            <td>{{.MaxValue}}</td>
+                            <td>{{.MinValue}}</td>
+                            <td>{{.AverageValue}}</td>
+                        {{end}}
+                    </tr>
+                {{end}}
+            {{end}}
+        </table>
+    </div>
+
+    <style>
+        .pitcher-metrics{
+            table-layout: auto;
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .pitcher-metrics th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: black;
+            color: white;
+            position: static;
+            text-align: center;
+            border: 1px solid #ddd;        
+        }
+        .pitcher-metrics td {
+            padding: .5rem;
+            /* word-break: break-all; */
+            border: 1px solid #ddd;
+        }
+    </style>
+{{end}}

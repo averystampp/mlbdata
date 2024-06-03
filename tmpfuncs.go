@@ -1,169 +1,76 @@
 package mlb
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
 	"strconv"
-	"time"
 )
 
-func retrievePitcher(ids []int) []PlayerOverview {
-	var list string
-	for i, id := range ids {
-		if i+1 == len(ids) {
-			list += strconv.Itoa(id)
-		} else {
-			list += strconv.Itoa(id) + ","
-		}
-	}
-	resp, err := http.Get(BASE + fmt.Sprintf("people?personIds=%s&hydrate=stats(group=[pitching],type=[season])", list))
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-	var pitcher PlayerHolder
-	err = json.NewDecoder(resp.Body).Decode(&pitcher)
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-
-	if len(pitcher.People) == 0 {
-		return []PlayerOverview{}
-	}
-
-	return pitcher.People
+type PitchMetric struct {
+	MetricName   string
+	AverageValue string
+	MinValue     string
+	MaxValue     string
+	PitchCount   string
 }
 
-func singlePitcher(id int) PlayerOverview {
-	resp, err := http.Get(BASE + fmt.Sprintf("people?personIds=%d&hydrate=stats(group=[pitching],type=[season])", id))
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-	var pitcher PlayerHolder
-	err = json.NewDecoder(resp.Body).Decode(&pitcher)
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-
-	if len(pitcher.People) == 0 {
-		return PlayerOverview{}
-	}
-
-	return pitcher.People[0]
-}
-
-func retrieveBatters(ids []int) []PlayerOverview {
-	var list string
-	for i, id := range ids {
-		if i+1 == len(ids) {
-			list += strconv.Itoa(id)
-		} else {
-			list += strconv.Itoa(id) + ","
-		}
-	}
-	resp, err := http.Get(BASE + fmt.Sprintf("people?personIds=%s&hydrate=stats(group=[batting],type=[season])", list))
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-	var players PlayerHolder
-	err = json.NewDecoder(resp.Body).Decode(&players)
-	if err != nil {
-		log.Printf("error retrieving pitching %s", err)
-	}
-
-	if len(players.People) == 0 {
-		return []PlayerOverview{}
-	}
-
-	return players.People
-}
-
-type PastPitcher struct {
-	InGameSplit
-	PlayerOverview
-}
-
-// playerType must be "pitching" || "hitting" || "fielding"
-func playerGameStats(pitchIds []int, gameId int, status string) []PastPitcher {
-	var (
-		splHolder []PastPitcher
-		p         = struct {
-			Copyright string           `json:"copyright"`
-			Info      []PlayerOverview `json:"people"`
-		}{}
-		t = struct {
-			Copyright string       `json:"copyright"`
-			P         []StatHolder `json:"stats"`
-		}{}
-	)
-	if status == "I" {
-		pitchIds = pitchIds[:len(pitchIds)-1]
-	}
-
-	for _, id := range pitchIds {
-		resp, err := http.Get(BASE + fmt.Sprintf("people/%d/stats/game/%d", id, gameId))
-		if err != nil {
-			return nil
-		}
-
-		defer resp.Body.Close()
-		err = json.NewDecoder(resp.Body).Decode(&t)
-		if err != nil {
-			return nil
-		}
-		respTwo, err := http.Get(BASE + fmt.Sprintf("people/%d", id))
-		if err != nil {
-			return nil
-		}
-		defer respTwo.Body.Close()
-		err = json.NewDecoder(respTwo.Body).Decode(&p)
-		if err != nil {
-			return nil
-		}
-		for _, spl := range t.P {
-			for _, stat := range spl.Splits {
-				if stat.Group == "pitching" {
-					splHolder = append(splHolder, PastPitcher{
-						InGameSplit:    stat,
-						PlayerOverview: p.Info[0],
+func pitchingMetrics(pm PitcherMetrics) map[string][]PitchMetric {
+	stats := make(map[string][]PitchMetric)
+	for _, stat := range pm.Stats {
+		for _, split := range stat.Splits {
+			_, ok := stats[split.Stat.Event.Details.Type.Description]
+			if ok {
+				stats[split.Stat.Event.Details.Type.Description] = append(stats[split.Stat.Event.Details.Type.Description],
+					PitchMetric{
+						MetricName:   split.Stat.Metric.Name,
+						AverageValue: fmt.Sprintf("%.2f %s", split.Stat.Metric.AverageValue, split.Stat.Metric.Unit),
+						MaxValue:     fmt.Sprintf("%.2f %s", split.Stat.Metric.MaxValue, split.Stat.Metric.Unit),
+						MinValue:     fmt.Sprintf("%.2f %s", split.Stat.Metric.MinValue, split.Stat.Metric.Unit),
+						PitchCount:   strconv.Itoa(split.NumOccurrences),
 					})
+			} else {
+				stats[split.Stat.Event.Details.Type.Description] = []PitchMetric{
+					{
+						MetricName:   split.Stat.Metric.Name,
+						AverageValue: fmt.Sprintf("%.2f %s", split.Stat.Metric.AverageValue, split.Stat.Metric.Unit),
+						MaxValue:     fmt.Sprintf("%.2f %s", split.Stat.Metric.MaxValue, split.Stat.Metric.Unit),
+						MinValue:     fmt.Sprintf("%.2f %s", split.Stat.Metric.MinValue, split.Stat.Metric.Unit),
+						PitchCount:   strconv.Itoa(split.NumOccurrences),
+					},
 				}
 			}
 		}
 	}
-	return splHolder
+	return stats
 }
 
-func addNums(i, l int) int {
-	return i + l
-}
-
-func subNums(i, l int) int {
-	return i - l
-}
-
-func calculateERA(er int, ip string) string {
-	ipasFloat, err := strconv.ParseFloat(ip, 64)
-	if err != nil {
-		return ""
+func RemoveDups(p Pitcher) []string {
+	var seasons []string
+	for _, stat := range p.Stats {
+		for _, spl := range stat.Splits {
+			if len(seasons) == 0 {
+				seasons = append(seasons, spl.Season)
+			}
+			if spl.Season == seasons[len(seasons)-1] || spl.Season == "" {
+				continue
+			}
+			seasons = append(seasons, spl.Season)
+		}
 	}
-
-	a := float64((9 * er)) / ipasFloat
-	return fmt.Sprintf("%.2f", a)
+	return seasons
 }
 
-func localTime(t string) string {
-	local, err := time.ParseInLocation(time.RFC3339, t, time.Local)
-	if err != nil {
-		return err.Error()
+func RemoveDupsBatter(b Batter) []string {
+	var seasons []string
+	for _, stat := range b.Stats {
+		for _, spl := range stat.Splits {
+			if len(seasons) == 0 {
+				seasons = append(seasons, spl.Season)
+			}
+			if spl.Season == seasons[len(seasons)-1] || spl.Season == "" {
+				continue
+			}
+			seasons = append(seasons, spl.Season)
+		}
 	}
-	local = local.In(time.Local)
-	y, m, d := local.Date()
-
-	if local.Day() == time.Now().Day() && local.Year() == time.Now().Year() {
-		return "@ " + local.Format(time.Kitchen)
-	}
-
-	return fmt.Sprintf("%s %d, %d", m.String(), d, y) + " " + local.Format(time.Kitchen)
+	return seasons
 }

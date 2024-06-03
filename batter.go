@@ -1,9 +1,13 @@
 package mlb
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type Batter struct {
@@ -48,9 +52,9 @@ type Batter struct {
 		} `json:"group"`
 		Exemptions []interface{} `json:"exemptions"`
 		Splits     []struct {
-			Season        string `json:"season"`
-			PitchingStats `json:"stat"`
-			Team          struct {
+			Season       string `json:"season"`
+			BattingStats `json:"stat"`
+			Team         struct {
 				ID   int    `json:"id"`
 				Name string `json:"name"`
 				Link string `json:"link"`
@@ -129,23 +133,24 @@ type BattingStats struct {
 	AtBatsPerHomeRun     string `json:"atBatsPerHomeRun"`
 }
 
-func GetOneBatterData(link string) (Batter, error) {
-	resp, err := http.Get(fmt.Sprintf("https://statsapi.mlb.com%s?hydrate=stats(group=[hitting],type=[season]),currentTeam", link))
+// yearByYear,career
+func GetOneBatterData(id string, span string, season string) (Batter, error) {
+	resp, err := http.Get(fmt.Sprintf(BASE+"people/%s/?hydrate=stats(group=[hitting],type=[%s],seasons=[%s]),currentTeam", id, span, season))
 	if err != nil {
 		return Batter{}, err
 	}
 	d := struct {
 		Copyright string   `json:"copyright"`
-		Batter    []Batter `json:"people"`
+		Pitcher   []Batter `json:"people"`
 	}{}
 	err = json.NewDecoder(resp.Body).Decode(&d)
 	if err != nil {
 		return Batter{}, err
 	}
-	if len(d.Batter) == 0 {
+	if len(d.Pitcher) == 0 {
 		return Batter{}, fmt.Errorf("no data marshaled")
 	}
-	return d.Batter[0], nil
+	return d.Pitcher[0], nil
 }
 
 func GetManyBatterData(ids string) ([]Batter, error) {
@@ -162,4 +167,255 @@ func GetManyBatterData(ids string) ([]Batter, error) {
 		return nil, err
 	}
 	return d.Batters, nil
+}
+
+func (b *Batter) WriteToExcel(resp http.ResponseWriter) error {
+	f := excelize.NewFile()
+	_, err := f.NewSheet(b.FullName)
+	if err != nil {
+		return err
+	}
+	if err = f.DeleteSheet("Sheet1"); err != nil {
+		return err
+	}
+	err = f.SetSheetRow(b.FullName, "A1", &[]interface{}{
+		"Team",
+		"Season",
+		"G",
+		"AB",
+		"PA",
+		"AVG",
+		"BABIP",
+		"OBP",
+		"SLG",
+		"OPS",
+		"SO",
+		"BB",
+		"H",
+		"2B",
+		"3B",
+		"HR",
+		"RBI",
+		"SB",
+		"CS",
+		"SB%",
+	})
+	if err != nil {
+		return err
+	}
+	for _, splits := range b.Stats {
+		for i, stat := range splits.Splits {
+			if stat.Team.Name == "" {
+				stat.Team.Name = "Total " + stat.Season
+			}
+			if stat.Season != "" {
+				err = f.SetSheetRow(b.FullName, fmt.Sprintf("A%d", i+2), &[]interface{}{
+					stat.Team.Name,
+					stat.Season,
+					stat.GamesPlayed,
+					stat.AtBats,
+					stat.PlateAppearances,
+					stat.Avg,
+					stat.Babip,
+					stat.Obp,
+					stat.Slg,
+					stat.Ops,
+					stat.StrikeOuts,
+					stat.BaseOnBalls,
+					stat.Hits,
+					stat.Doubles,
+					stat.Triples,
+					stat.HomeRuns,
+					stat.Rbi,
+					stat.StolenBases,
+					stat.CaughtStealing,
+					stat.StolenBasePercentage,
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	a := fmt.Sprintf("A%d", len(b.Stats[0].Splits)+2)
+	err = f.SetSheetRow(b.FullName, a, &[]interface{}{
+		"Total",
+		b.Stats[1].Splits[0].Season,
+		b.Stats[1].Splits[0].GamesPlayed,
+		b.Stats[1].Splits[0].AtBats,
+		b.Stats[1].Splits[0].PlateAppearances,
+		b.Stats[1].Splits[0].Avg,
+		b.Stats[1].Splits[0].Babip,
+		b.Stats[1].Splits[0].Obp,
+		b.Stats[1].Splits[0].Slg,
+		b.Stats[1].Splits[0].Ops,
+		b.Stats[1].Splits[0].StrikeOuts,
+		b.Stats[1].Splits[0].BaseOnBalls,
+		b.Stats[1].Splits[0].Hits,
+		b.Stats[1].Splits[0].Doubles,
+		b.Stats[1].Splits[0].Triples,
+		b.Stats[1].Splits[0].HomeRuns,
+		b.Stats[1].Splits[0].Rbi,
+		b.Stats[1].Splits[0].StolenBases,
+		b.Stats[1].Splits[0].CaughtStealing,
+		b.Stats[1].Splits[0].StolenBasePercentage,
+	})
+	if err != nil {
+		return err
+	}
+	resp.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.xlsx", b.FullName))
+	f.Write(resp)
+	return nil
+}
+
+func (b *Batter) WriteToExcelSeasonal(resp http.ResponseWriter) error {
+	f := excelize.NewFile()
+	_, err := f.NewSheet(b.FullName)
+	if err != nil {
+		return err
+	}
+	if err = f.DeleteSheet("Sheet1"); err != nil {
+		return err
+	}
+	err = f.SetSheetRow(b.FullName, "A1", &[]interface{}{
+		"Team",
+		"Season",
+		"G",
+		"AB",
+		"PA",
+		"AVG",
+		"BABIP",
+		"OBP",
+		"SLG",
+		"OPS",
+		"SO",
+		"BB",
+		"H",
+		"2B",
+		"3B",
+		"HR",
+		"RBI",
+		"SB",
+		"CS",
+		"SB%",
+	})
+	if err != nil {
+		return err
+	}
+	for _, splits := range b.Stats {
+		for i, stat := range splits.Splits {
+			if stat.Team.Name == "" {
+				stat.Team.Name = "Total " + stat.Season
+			}
+			if stat.Season != "" {
+				err = f.SetSheetRow(b.FullName, fmt.Sprintf("A%d", i+2), &[]interface{}{
+					stat.Team.Name,
+					stat.Season,
+					stat.GamesPlayed,
+					stat.AtBats,
+					stat.PlateAppearances,
+					stat.Avg,
+					stat.Babip,
+					stat.Ops,
+					stat.Slg,
+					stat.Ops,
+					stat.StrikeOuts,
+					stat.BaseOnBalls,
+					stat.Hits,
+					stat.Doubles,
+					stat.Triples,
+					stat.HomeRuns,
+					stat.Rbi,
+					stat.StolenBases,
+					stat.CaughtStealing,
+					stat.StolenBasePercentage,
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if err := f.SetColWidth(b.FullName, "A", "AZ", 5); err != nil {
+		return err
+	}
+
+	resp.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.xlsx", b.FullName))
+	f.Write(resp)
+	return nil
+}
+
+func (b *Batter) WriteToJSON(resp http.ResponseWriter) error {
+	var p1 Batter = *b
+	body, err := json.Marshal(&p1)
+	if err != nil {
+		return err
+	}
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.json", b.FullName))
+	resp.Write(body)
+	return nil
+}
+
+func (b *Batter) WriteToCSV(resp http.ResponseWriter) error {
+	var fileContent [][]string
+	head := []string{
+		"Team",
+		"Season",
+		"G",
+		"AB",
+		"PA",
+		"AVG",
+		"BABIP",
+		"OBP",
+		"SLG",
+		"OPS",
+		"SO",
+		"BB",
+		"H",
+		"2B",
+		"3B",
+		"HR",
+		"RBI",
+		"SB",
+		"CS",
+		"SB%",
+	}
+	fileContent = append(fileContent, head)
+	for _, splits := range b.Stats {
+		for _, stat := range splits.Splits {
+			if stat.Team.Name == "" {
+				stat.Team.Name = "Total " + stat.Season
+			}
+			body := []string{
+				stat.Team.Name,
+				stat.Season,
+				strconv.Itoa(stat.GamesPlayed),
+				strconv.Itoa(stat.AtBats),
+				strconv.Itoa(stat.PlateAppearances),
+				stat.Avg,
+				stat.Babip,
+				stat.Obp,
+				stat.Slg,
+				stat.Ops,
+				strconv.Itoa(stat.StrikeOuts),
+				strconv.Itoa(stat.BaseOnBalls),
+				strconv.Itoa(stat.Hits),
+				strconv.Itoa(stat.Doubles),
+				strconv.Itoa(stat.Triples),
+				strconv.Itoa(stat.HomeRuns),
+				strconv.Itoa(stat.Rbi),
+				strconv.Itoa(stat.StolenBases),
+				strconv.Itoa(stat.CaughtStealing),
+				stat.StolenBasePercentage,
+			}
+
+			fileContent = append(fileContent, body)
+		}
+	}
+	resp.Header().Set("Content-Type", "text/csv")
+	resp.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", b.FullName))
+	return csv.NewWriter(resp).WriteAll(fileContent)
 }

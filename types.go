@@ -82,7 +82,7 @@ type Sport struct {
 
 // Player types
 // _____________________________________________________________________________________________
-type Player struct {
+type Player_ struct {
 	Person       `json:"person"`
 	JerseyNumber string `json:"jerseyNumber"`
 	Position     `json:"position"`

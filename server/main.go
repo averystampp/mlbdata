@@ -1,8 +1,6 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"log"
 
 	"github.com/averystampp/mlb"
@@ -50,17 +48,7 @@ func main() {
 	db.Close()
 
 	rtr := sesame.NewRouter()
-	players := flag.Bool("players", false, "")
-	flag.Parse()
-	if *players {
-		err := mlb.GetAllPlayers()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("Got all player data")
-	} else {
-		fmt.Println("Starting without player pull")
-	}
+
 	mlb.StartMLBService(rtr)
 	mlb.DraftService(rtr)
 	mlb.UserService(rtr)

@@ -1,35 +1,47 @@
 package mlb
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"strconv"
-	"strings"
 	"time"
-
-	bolt "go.etcd.io/bbolt"
 
 	"github.com/averystampp/sesame"
 )
 
+var tmpl *template.Template = template.Must(template.New("player.html").Funcs(template.FuncMap{
+	"metrics":          pitchingMetrics,
+	"removeDups":       RemoveDups,
+	"removeDupsBatter": RemoveDupsBatter,
+}).ParseGlob("../static/*.html"))
+
 func StartMLBService(rtr *sesame.Router) {
 	rtr.Get("/", Index)
-	// remove when possible
-	rtr.Get("/players", AllPlayers)
-	rtr.Get("/player/search", PlayerSearchRoute)
-	rtr.Get("/player/search/name", PlayerResponseRoute)
 
 	// new
 	rtr.Get("/team/{teamId}", TeamRosterRoute)
 	rtr.Get("/pitcher/{id}", PitcherRoute)
-	rtr.Post("/export/pitcher/{id}", ExportPitcherDataRoute)
-	rtr.Post("/test", t)
+	rtr.Get("/batter/{id}", BatterRoute)
 
-	// dont touch yet
-	rtr.Post("/player/export", ExportPlayerData)
+	rtr.Get("/test", func(ctx sesame.Context) error {
 
+		metrics, err := GetPitcherMetrics(573186)
+		if err != nil {
+			return err
+		}
+		fmt.Println(metrics)
+		return nil
+	})
+
+	// exports pitcher
+	rtr.Post("/export/pitcher/seasonal/{id}", ExportSeasonalPitcherData)
+	rtr.Post("/export/pitcher/career/{id}", ExportCareerPitcherData)
+
+	rtr.Post("/export/batter/career/{id}", ExportCareerBatterDataRoute)
+	rtr.Post("/export/batter/seasonal/{id}", ExportSeasonalBatterDataRoute)
+
+	// test
 }
 
 func Index(ctx sesame.Context) error {
@@ -52,106 +64,6 @@ func Index(ctx sesame.Context) error {
 	return tmpl.Execute(ctx.Response(), teams)
 }
 
-func AllPlayers(ctx sesame.Context) error {
-	db, err := bolt.Open("../players.db", 0600, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	var players []PlayerSearch
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("players"))
-		if err != nil {
-			return err
-		}
-		err = b.ForEach(func(k, v []byte) error {
-			id, err := strconv.ParseInt(string(v), 10, 64)
-			if err != nil {
-				return err
-			}
-			p := PlayerSearch{
-				Name: string(k),
-				ID:   int(id),
-			}
-			fmt.Println(p)
-			players = append(players, p)
-			return nil
-
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	ctx.Response().Header().Set("Content-Type", "application/json")
-	body, err := json.Marshal(&players)
-	ctx.Response().Write(body)
-	return nil
-}
-
-func PlayerSearchRoute(ctx sesame.Context) error {
-	tmpl, err := template.ParseFiles("../pages/builder.html")
-	if err != nil {
-		return err
-	}
-	ctx.Response().Header().Set("Content-Type", "text/html")
-	return tmpl.Execute(ctx.Response(), nil)
-}
-
-func PlayerResponseRoute(ctx sesame.Context) error {
-	name := ctx.Request().URL.Query().Get("name")
-	if name == "" {
-		ctx.Response().Write([]byte("{}"))
-		return nil
-	}
-	db, err := bolt.Open("../players.db", 0600, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	var players []PlayerSearch
-	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("players"))
-		if err != nil {
-			return err
-		}
-		err = b.ForEach(func(k, v []byte) error {
-			name = strings.ToTitle(string(name[0])) + name[1:]
-			if strings.HasPrefix(string(k), name) {
-				id, err := strconv.ParseInt(string(v), 10, 64)
-				if err != nil {
-					return err
-				}
-
-				p := PlayerSearch{
-					Name: string(k),
-					ID:   int(id),
-				}
-				players = append(players, p)
-				return nil
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	ctx.Response().Header().Set("Content-Type", "application/json")
-	if len(players) > 5 {
-		players = players[:5]
-	}
-	body, err := json.Marshal(&players)
-	ctx.Response().Write(body)
-	return nil
-}
-
 func PitcherRoute(ctx sesame.Context) error {
 	id := ctx.Request().PathValue("id")
 	if id == "" {
@@ -162,23 +74,8 @@ func PitcherRoute(ctx sesame.Context) error {
 	if err != nil {
 		return err
 	}
-	tmpl, err := template.New("player.html").Funcs(template.FuncMap{
-		"removeDups": func(p Pitcher) []string {
-			var seasons []string
-			for _, stat := range p.Stats {
-				for _, spl := range stat.Splits {
-					if len(seasons) == 0 {
-						seasons = append(seasons, spl.Season)
-					}
-					if spl.Season == seasons[len(seasons)-1] || spl.Season == "" {
-						continue
-					}
-					seasons = append(seasons, spl.Season)
-				}
-			}
-			return seasons
-		},
-	}).ParseFiles("../pages/player.html")
+
+	metrics, err := GetPitcherMetrics(p.ID)
 	if err != nil {
 		return err
 	}
@@ -186,58 +83,145 @@ func PitcherRoute(ctx sesame.Context) error {
 	d := struct {
 		PlayerType string
 		Data       Pitcher
+		Metrics    PitcherMetrics
 	}{
 		PlayerType: "pitcher",
 		Data:       p,
+		Metrics:    metrics,
 	}
 
-	return tmpl.Execute(ctx.Response(), d)
+	return tmpl.ExecuteTemplate(ctx.Response(), "player.html", d)
 }
 
-func ExportPitcherDataRoute(ctx sesame.Context) error {
+func BatterRoute(ctx sesame.Context) error {
+
+	id := ctx.Request().PathValue("id")
+	if id == "" {
+		return fmt.Errorf("must have id to continue")
+	}
+
+	batter, err := GetOneBatterData(id, "yearByYear,career", strconv.Itoa(time.Now().Year()))
+	if err != nil {
+		return err
+	}
+
+	d := struct {
+		PlayerType string
+		Data       Batter
+	}{
+		PlayerType: "batter",
+		Data:       batter,
+	}
+
+	return tmpl.ExecuteTemplate(ctx.Response(), "player.html", d)
+}
+
+func ExportSeasonalPitcherData(ctx sesame.Context) error {
+	id := ctx.Request().PathValue("id")
+	err := ctx.Request().ParseForm()
+	if err != nil {
+		return err
+	}
+	var s string
+	for k, v := range ctx.Request().PostForm {
+		if k == "season" {
+			s = joinSeasons(v)
+		}
+	}
+	p, err := GetOnePitcherData(id, "season", s)
+	if err != nil {
+		return err
+	}
+
+	exportType := ctx.Request().PostFormValue("exportType")
+	switch exportType {
+	case "xlsx":
+		return p.WriteToExcelSeasonal(ctx.Response())
+	case "json":
+		return p.WriteToJSON(ctx.Response())
+	case "csv":
+		return p.WriteToCSV(ctx.Response())
+	default:
+		return fmt.Errorf("must have a supported export type (json, xlsx, txt)")
+	}
+}
+
+func ExportCareerPitcherData(ctx sesame.Context) error {
 	id := ctx.Request().PathValue("id")
 	if id == "" {
 		return fmt.Errorf("must have id to process request")
 	}
-	span := ctx.Request().PostFormValue("span")
-	if span == "career" {
-		p, err := GetOnePitcherData(id, "yearByYear,career", strconv.Itoa(time.Now().Year()))
-		if err != nil {
-			return err
-		}
-		b, err := json.Marshal(&p)
-		if err != nil {
-			return err
-		}
-		ctx.Response().Header().Set("Content-Type", "application/json")
-		ctx.Response().Write(b)
-		return nil
-	}
-	if span == "season" {
-		err := ctx.Request().ParseForm()
-		if err != nil {
-			return err
-		}
-		var s string
-		for k, v := range ctx.Request().PostForm {
-			if k == "season" {
-				s = joinSeasons(v)
-			}
-		}
-		p, err := GetOnePitcherData(id, "season", s)
-		if err != nil {
-			return err
-		}
-		b, err := json.Marshal(&p)
-		if err != nil {
-			return err
-		}
-		ctx.Response().Header().Set("Content-Type", "application/json")
-		ctx.Response().Write(b)
-		return nil
+
+	p, err := GetOnePitcherData(id, "yearByYear,career", strconv.Itoa(time.Now().Year()))
+	if err != nil {
+		return err
 	}
 
-	return fmt.Errorf("must have a span of \"career\" or \"season\"")
+	exportType := ctx.Request().PostFormValue("exportType")
+	switch exportType {
+	case "xlsx":
+		return p.WriteToExcel(ctx.Response())
+	case "json":
+		return p.WriteToJSON(ctx.Response())
+	case "csv":
+		return p.WriteToCSV(ctx.Response())
+	default:
+		return fmt.Errorf("must have a supported export type (json, xlsx, txt)")
+	}
+}
+
+func ExportCareerBatterDataRoute(ctx sesame.Context) error {
+	id := ctx.Request().PathValue("id")
+	if id == "" {
+		return fmt.Errorf("must have id to process request")
+	}
+
+	b, err := GetOneBatterData(id, "yearByYear,career", strconv.Itoa(time.Now().Year()))
+	if err != nil {
+		return err
+	}
+
+	exportType := ctx.Request().PostFormValue("exportType")
+	switch exportType {
+	case "xlsx":
+		return b.WriteToExcel(ctx.Response())
+	case "json":
+		return b.WriteToJSON(ctx.Response())
+	case "csv":
+		return b.WriteToCSV(ctx.Response())
+	default:
+		return fmt.Errorf("must have a supported export type (json, xlsx, txt)")
+	}
+}
+
+func ExportSeasonalBatterDataRoute(ctx sesame.Context) error {
+	id := ctx.Request().PathValue("id")
+	err := ctx.Request().ParseForm()
+	if err != nil {
+		return err
+	}
+	var s string
+	for k, v := range ctx.Request().PostForm {
+		if k == "season" {
+			s = joinSeasons(v)
+		}
+	}
+	b, err := GetOneBatterData(id, "season", s)
+	if err != nil {
+		return err
+	}
+
+	exportType := ctx.Request().PostFormValue("exportType")
+	switch exportType {
+	case "xlsx":
+		return b.WriteToExcelSeasonal(ctx.Response())
+	case "json":
+		return b.WriteToJSON(ctx.Response())
+	case "csv":
+		return b.WriteToCSV(ctx.Response())
+	default:
+		return fmt.Errorf("must have a supported export type (json, xlsx, txt)")
+	}
 }
 
 func TeamRosterRoute(ctx sesame.Context) error {
@@ -259,6 +243,10 @@ func TeamRosterRoute(ctx sesame.Context) error {
 		return err
 	}
 
+	record, err := TeamRecord(teamId)
+	if err != nil {
+		return err
+	}
 	p, err := GetManyPitcherData(joinIds(pitchers))
 	if err != nil {
 		return err
@@ -271,18 +259,15 @@ func TeamRosterRoute(ctx sesame.Context) error {
 		Team     Team
 		Pitchers []Pitcher
 		Batters  []Batter
+		Record   SimpleRecord
 	}{
 		Team:     team,
 		Pitchers: p,
 		Batters:  b,
+		Record:   record,
 	}
 
-	tmpl, err := template.ParseFiles("../pages/teamRoster.html")
-	if err != nil {
-		return err
-	}
-
-	return tmpl.Execute(ctx.Response(), d)
+	return tmpl.ExecuteTemplate(ctx.Response(), "teamRoster.html", d)
 }
 
 func joinIds(players []FortyManSearch) string {
@@ -293,23 +278,8 @@ func joinIds(players []FortyManSearch) string {
 		} else {
 			ids += strconv.Itoa(p.Person.ID)
 		}
-
 	}
 	return ids
-}
-
-func t(ctx sesame.Context) error {
-	err := ctx.Request().ParseForm()
-	if err != nil {
-		return err
-	}
-	for k, v := range ctx.Request().PostForm {
-		if k == "season" {
-			s := joinSeasons(v)
-			fmt.Println(s)
-		}
-	}
-	return nil
 }
 
 func joinSeasons(s []string) string {
