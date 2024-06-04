@@ -305,8 +305,8 @@ func GetOnePitcherData(id string, span string, season string) (Pitcher, error) {
 	return d.Pitcher[0], nil
 }
 
-func GetManyPitcherData(ids string) ([]Pitcher, error) {
-	resp, err := http.Get(fmt.Sprintf(BASE+"people?personIds=%s&hydrate=stats(group=[pitching],type=[season]),currentTeam", ids))
+func GetManyPitcherData(ids, span, season string) ([]Pitcher, error) {
+	resp, err := http.Get(fmt.Sprintf(BASE+"people?personIds=%s&hydrate=stats(group=[pitching],type=[%s],seasons=[%s]),currentTeam", ids, span, season))
 	if err != nil {
 		return nil, err
 	}

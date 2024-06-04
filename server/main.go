@@ -9,12 +9,6 @@ import (
 )
 
 func main() {
-	// var err error
-	// connStr := "postgresql://postgres:docker@localhost:5432/postgres?sslmode=disable"
-	// sesame.DB, err = sql.Open("postgres", connStr)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 	db, err := bolt.Open("../players.db", 0600, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -48,9 +42,6 @@ func main() {
 	db.Close()
 
 	rtr := sesame.NewRouter()
-
 	mlb.StartMLBService(rtr)
-	mlb.DraftService(rtr)
-	mlb.UserService(rtr)
 	rtr.StartServer(":5000")
 }

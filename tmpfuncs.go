@@ -74,3 +74,28 @@ func RemoveDupsBatter(b Batter) []string {
 	}
 	return seasons
 }
+
+func joinIds(players []FortyManSearch) string {
+	var ids string
+	for i, p := range players {
+		if i != len(players)-1 {
+			ids += strconv.Itoa(p.Person.ID) + ","
+		} else {
+			ids += strconv.Itoa(p.Person.ID)
+		}
+	}
+	return ids
+}
+
+func joinSeasons(s []string) string {
+	var seasons string
+	for i, p := range s {
+		if i != len(s)-1 {
+			seasons += p + ","
+		} else {
+			seasons += p
+		}
+
+	}
+	return seasons
+}

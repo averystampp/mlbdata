@@ -270,17 +270,3 @@ func GetAllPlayers() error {
 	defer db.Close()
 	return nil
 }
-
-func getOnePlayer(id string) (PlayerOverview, error) {
-	resp, err := http.Get(BASE + fmt.Sprintf("people?personIds=%s&hydrate=currentTeam", id))
-	if err != nil {
-		return PlayerOverview{}, err
-	}
-
-	var holder PlayerHolder
-	err = json.NewDecoder(resp.Body).Decode(&holder)
-	if err != nil {
-		return PlayerOverview{}, err
-	}
-	return holder.People[0], nil
-}

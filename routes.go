@@ -3,7 +3,7 @@ package mlb
 import (
 	"fmt"
 	"html/template"
-	"log"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -24,14 +24,32 @@ func StartMLBService(rtr *sesame.Router) {
 	rtr.Get("/pitcher/{id}", PitcherRoute)
 	rtr.Get("/batter/{id}", BatterRoute)
 
-	rtr.Get("/test", func(ctx sesame.Context) error {
+	rtr.Get("/static/{name}", func(ctx sesame.Context) error {
+		fileName := ctx.Request().PathValue("name")
+		if fileName == "" {
+			return fmt.Errorf("must have a filename to serve")
+		}
+		http.ServeFile(ctx.Response(), ctx.Request(), fmt.Sprintf("../static/%s", fileName))
+		return nil
+	})
 
-		metrics, err := GetPitcherMetrics(573186)
+	rtr.Get("/test", func(ctx sesame.Context) error {
+		return LeagePitchingStats()
+	})
+
+	rtr.Get("/nav", func(ctx sesame.Context) error {
+
+		t, err := template.New("nav").ParseFiles("../static/navbar.html")
 		if err != nil {
 			return err
 		}
-		fmt.Println(metrics)
-		return nil
+		t, err = t.Parse("{{template \"navbar\"}}")
+		if err != nil {
+			return err
+		}
+		ctx.Response().Header().Set("Content-Type", "text/html")
+
+		return t.Execute(ctx.Response(), nil)
 	})
 
 	// exports pitcher
@@ -89,12 +107,10 @@ func PitcherRoute(ctx sesame.Context) error {
 		Data:       p,
 		Metrics:    metrics,
 	}
-
 	return tmpl.ExecuteTemplate(ctx.Response(), "player.html", d)
 }
 
 func BatterRoute(ctx sesame.Context) error {
-
 	id := ctx.Request().PathValue("id")
 	if id == "" {
 		return fmt.Errorf("must have id to continue")
@@ -112,7 +128,6 @@ func BatterRoute(ctx sesame.Context) error {
 		PlayerType: "batter",
 		Data:       batter,
 	}
-
 	return tmpl.ExecuteTemplate(ctx.Response(), "player.html", d)
 }
 
@@ -225,10 +240,6 @@ func ExportSeasonalBatterDataRoute(ctx sesame.Context) error {
 }
 
 func TeamRosterRoute(ctx sesame.Context) error {
-	now := time.Now()
-	defer func() {
-		log.Printf("path=%s took=%s\n", ctx.Request().URL.Path, time.Since(now))
-	}()
 	teamId := ctx.Request().PathValue("teamId")
 	if teamId == "" {
 		return fmt.Errorf("need a team id to process request")
@@ -247,7 +258,7 @@ func TeamRosterRoute(ctx sesame.Context) error {
 	if err != nil {
 		return err
 	}
-	p, err := GetManyPitcherData(joinIds(pitchers))
+	p, err := GetManyPitcherData(joinIds(pitchers), "season", "2024")
 	if err != nil {
 		return err
 	}
@@ -268,29 +279,4 @@ func TeamRosterRoute(ctx sesame.Context) error {
 	}
 
 	return tmpl.ExecuteTemplate(ctx.Response(), "teamRoster.html", d)
-}
-
-func joinIds(players []FortyManSearch) string {
-	var ids string
-	for i, p := range players {
-		if i != len(players)-1 {
-			ids += strconv.Itoa(p.Person.ID) + ","
-		} else {
-			ids += strconv.Itoa(p.Person.ID)
-		}
-	}
-	return ids
-}
-
-func joinSeasons(s []string) string {
-	var seasons string
-	for i, p := range s {
-		if i != len(s)-1 {
-			seasons += p + ","
-		} else {
-			seasons += p
-		}
-
-	}
-	return seasons
 }

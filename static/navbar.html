@@ -1,11 +1,52 @@
 {{define "navbar"}}
-<div>
+<div class="nav-main">
     <nav>
         <ul>
-            <li></li>
-            <li><a href="/" >Home</a></li> 
+            <div class="holder">
+                <a href="/">
+                    <img class="img-s" src="/static/6510324.png" alt="">
+                </a>
+            </div>
+            <div class="link-holder">
+                <li><a class="nav-link" href="/">Player Search</a></li>
+                <li><a class="nav-link" href="/">Analysis</a></li> 
+                <li><a class="nav-link" href="/">Home</a></li> 
+            </div>
         </ul>
     </nav>
 </div>
+
+<style>
+    .nav-main{
+        margin: 1rem;
+        border-radius: 13px;
+        padding: 1rem;
+        background-color: black;
+    }
+
+    .nav-link {
+        padding: 1rem;
+        color: whitesmoke;
+        list-style: none;
+    }
+
+    .link-holder {
+        display: flex;
+        justify-content: end;
+    }
+
+    .holder{
+        position: absolute;
+        width: fit-content;
+        top: 2rem;
+    }
+
+    .img-s{
+        object-fit: contain;
+        left: 0px;
+        width: 50px;
+    }
+</style>
+
 
 {{end}}
