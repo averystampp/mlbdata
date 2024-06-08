@@ -1,7 +1,5 @@
 package mlb
 
-import "time"
-
 const (
 	BASE string = "https://statsapi.mlb.com/api/v1/"
 )
@@ -110,65 +108,6 @@ type Status struct {
 
 // Game types
 // _____________________________________________________________________________________________
-type GameDay struct {
-	Copyright            string  `json:"copyright"`
-	TotalItems           int     `json:"totalItems"`
-	TotalEvents          int     `json:"totalEvents"`
-	TotalGames           int     `json:"totalGames"`
-	TotalGamesInProgress int     `json:"totalGamesInProgress"`
-	Dates                []Dates `json:"dates"`
-}
-
-type Dates struct {
-	TotalItems           int           `json:"totalItems"`
-	TotalEvents          int           `json:"totalEvents"`
-	TotalGames           int           `json:"totalGames"`
-	TotalGamesInProgress int           `json:"totalGamesInProgress"`
-	Date                 string        `json:"date"`
-	Games                []Games       `json:"games"`
-	Events               []interface{} `json:"events"`
-}
-
-type Games struct {
-	GamePk                 int       `json:"gamePk"`
-	GameGUID               string    `json:"gameGuid"`
-	Link                   string    `json:"link"`
-	GameType               string    `json:"gameType"`
-	Season                 string    `json:"season"`
-	GameDate               time.Time `json:"gameDate"`
-	OfficialDate           string    `json:"officialDate"`
-	GameStatus             `json:"status"`
-	GameTeamHolder         `json:"teams"`
-	Venue                  `json:"venue"`
-	Content                `json:"content"`
-	IsTie                  bool   `json:"isTie"`
-	GameNumber             int    `json:"gameNumber"`
-	PublicFacing           bool   `json:"publicFacing"`
-	DoubleHeader           string `json:"doubleHeader"`
-	GamedayType            string `json:"gamedayType"`
-	Tiebreaker             string `json:"tiebreaker"`
-	CalendarEventID        string `json:"calendarEventID"`
-	SeasonDisplay          string `json:"seasonDisplay"`
-	DayNight               string `json:"dayNight"`
-	ScheduledInnings       int    `json:"scheduledInnings"`
-	ReverseHomeAwayStatus  bool   `json:"reverseHomeAwayStatus"`
-	InningBreakLength      int    `json:"inningBreakLength"`
-	GamesInSeries          int    `json:"gamesInSeries"`
-	SeriesGameNumber       int    `json:"seriesGameNumber"`
-	SeriesDescription      string `json:"seriesDescription"`
-	RecordSource           string `json:"recordSource"`
-	IfNecessary            string `json:"ifNecessary"`
-	IfNecessaryDescription string `json:"ifNecessaryDescription"`
-}
-
-type GameStatus struct {
-	AbstractGameState string `json:"abstractGameState"`
-	CodedGameState    string `json:"codedGameState"`
-	DetailedState     string `json:"detailedState"`
-	StatusCode        string `json:"statusCode"`
-	StartTimeTBD      bool   `json:"startTimeTBD"`
-	AbstractGameCode  string `json:"abstractGameCode"`
-}
 
 type GameTeam struct {
 	LeagueRecord   `json:"leagueRecord"`

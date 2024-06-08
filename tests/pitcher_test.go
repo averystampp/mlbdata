@@ -32,7 +32,6 @@ func TestGetManyPitchers(t *testing.T) {
 				pitchers = RemoveIndex(pitchers, i)
 			}
 		}
-
 	}
 
 	if len(pitchers) != 0 {

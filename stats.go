@@ -63,7 +63,6 @@ func LeagePitchingStats() error {
 
 func process(pitchers []Pitcher, wg *sync.WaitGroup, f *excelize.File) {
 	defer wg.Done()
-
 	for _, pitcher := range pitchers {
 		row := pitcher.excelrow()
 		if row != nil {
@@ -79,7 +78,6 @@ func process(pitchers []Pitcher, wg *sync.WaitGroup, f *excelize.File) {
 		"IP",
 		"ERA",
 	})
-
 }
 
 func (p *Pitcher) excelrow() *[]interface{} {
@@ -87,7 +85,6 @@ func (p *Pitcher) excelrow() *[]interface{} {
 	if len(p.Stats) == 0 {
 		return nil
 	}
-
 	if len(p.Stats[0].Splits) > 0 {
 		var t []string
 		for _, team := range p.Stats[0].Splits {

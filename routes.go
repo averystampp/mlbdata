@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/averystampp/sesame"
+	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 )
 
 var tmpl *template.Template = template.Must(template.New("player.html").Funcs(template.FuncMap{
@@ -33,39 +35,27 @@ func StartMLBService(rtr *sesame.Router) {
 		return nil
 	})
 
-	rtr.Get("/test", func(ctx sesame.Context) error {
-		return LeagePitchingStats()
-	})
+	// Experimental
+	rtr.Get("/batter/{id}/games/logs", BatterGameLogRoute)
 
-	rtr.Get("/nav", func(ctx sesame.Context) error {
+	// Custom Teams
+	rtr.Get("/custom/home", CustomTeamHomeRoute)
+	rtr.Get("/custom/team/{teamId}", GetCustomTeamRoute)
+	rtr.Post("/custom/team/create", CreateCustomTeamRoute)
 
-		t, err := template.New("nav").ParseFiles("../static/navbar.html")
-		if err != nil {
-			return err
-		}
-		t, err = t.Parse("{{template \"navbar\"}}")
-		if err != nil {
-			return err
-		}
-		ctx.Response().Header().Set("Content-Type", "text/html")
-
-		return t.Execute(ctx.Response(), nil)
-	})
-
-	// exports pitcher
+	// Data Export Routes
+	// Pitcher Data
 	rtr.Post("/export/pitcher/seasonal/{id}", ExportSeasonalPitcherData)
 	rtr.Post("/export/pitcher/career/{id}", ExportCareerPitcherData)
-
+	// Batter Data
 	rtr.Post("/export/batter/career/{id}", ExportCareerBatterDataRoute)
 	rtr.Post("/export/batter/seasonal/{id}", ExportSeasonalBatterDataRoute)
-
-	// test
 }
 
 func Index(ctx sesame.Context) error {
 	teams, err := AllMLBTeams()
 	if err != nil {
-		return err
+		return ErrorRoute(ctx, http.StatusInternalServerError, err)
 	}
 
 	tmpl, err := template.New("").Parse(`
@@ -76,7 +66,7 @@ func Index(ctx sesame.Context) error {
 		{{end}}
 	`)
 	if err != nil {
-		return err
+		return ErrorRoute(ctx, http.StatusInternalServerError, err)
 	}
 	ctx.Response().Header().Set("Content-Type", "text/html")
 	return tmpl.Execute(ctx.Response(), teams)
@@ -279,4 +269,75 @@ func TeamRosterRoute(ctx sesame.Context) error {
 	}
 
 	return tmpl.ExecuteTemplate(ctx.Response(), "teamRoster.html", d)
+}
+
+func BatterGameLogRoute(ctx sesame.Context) error {
+	id := ctx.Request().PathValue("id")
+	if id == "" {
+		return ErrorRoute(ctx, http.StatusBadRequest, fmt.Errorf("must have player id in request"))
+	}
+	season := ctx.Request().URL.Query().Get("season")
+	if season == "" {
+		season = strconv.Itoa(time.Now().Year())
+	}
+	batter, err := GetBatterGameLog(id, season)
+	if err != nil {
+		return ErrorRoute(ctx, http.StatusBadRequest, err)
+	}
+	f := excelize.NewFile()
+	defer f.Close()
+	return batter.WriteBatterLogExcel(f, ctx.Response())
+}
+
+func ErrorRoute(ctx sesame.Context, status int, topLevelErr error) error {
+	s := `
+	<div>
+		<h1>Server responded with an error</h1>
+		<p>{{.}}</p>
+	</div>`
+
+	tmpl, err := template.New("").Parse(s)
+	if err != nil {
+		return err
+	}
+	ctx.Response().WriteHeader(status)
+	ctx.Response().Header().Set("Content-Type", "text/html")
+	return tmpl.Execute(ctx.Response(), topLevelErr)
+}
+
+func CustomTeamHomeRoute(ctx sesame.Context) error {
+	t, err := GetCustomTeams()
+	if err != nil {
+		return err
+	}
+	return tmpl.ExecuteTemplate(ctx.Response(), "custom_teams_home.html", t)
+}
+
+func CreateCustomTeamRoute(ctx sesame.Context) error {
+	teamName := ctx.Request().PostFormValue("teamName")
+	if teamName == "" {
+		return ErrorRoute(ctx, http.StatusBadRequest, fmt.Errorf("must have a team name to create a team"))
+	}
+	_, err := CreateCustomTeam(teamName, "someone")
+	if err != nil {
+		return ErrorRoute(ctx, http.StatusInternalServerError, err)
+	}
+
+	http.Redirect(ctx.Response(), ctx.Request(), "/custom/home", http.StatusSeeOther)
+	return nil
+}
+
+func GetCustomTeamRoute(ctx sesame.Context) error {
+	id := ctx.Request().PathValue("teamId")
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return ErrorRoute(ctx, http.StatusBadRequest, err)
+	}
+
+	team, err := GetOneCustomTeam(uid)
+	if err != nil {
+		return ErrorRoute(ctx, http.StatusInternalServerError, err)
+	}
+	fmt.Println(*team)
+	return nil
 }

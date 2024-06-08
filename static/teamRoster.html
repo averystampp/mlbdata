@@ -138,14 +138,13 @@
                     <td><a href="/batter/{{.ID}}">{{.FullName}}</a></td>
                     <td>{{.PrimaryPosition.Name}}</td>
                     {{range .Stats}}
-                        {{range .Splits}}
-                            <td>{{.Avg}}</td>
-                            <td>{{.Obp}}</td>
-                            <td>{{.Ops}}</td>        
-                            <td>{{.HomeRuns}}</td>        
-                            <td>{{.AtBats}}</td>        
-                            <td>{{.PlateAppearances}}</td>        
-                        {{end}}
+                        {{$spl := (index .Splits 0)}}
+                            <td>{{$spl.Avg}}</td>
+                            <td>{{$spl.Obp}}</td>
+                            <td>{{$spl.Ops}}</td>        
+                            <td>{{$spl.HomeRuns}}</td>        
+                            <td>{{$spl.AtBats}}</td>        
+                            <td>{{$spl.PlateAppearances}}</td>        
                     {{end}}
                 </tr>
                 {{end}}

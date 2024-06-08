@@ -15,22 +15,6 @@ func main() {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err = tx.CreateBucketIfNotExists([]byte("players"))
-		if err != nil {
-			return err
-		}
-		_, err = tx.CreateBucketIfNotExists([]byte("users"))
-		if err != nil {
-			return err
-		}
-		_, err = tx.CreateBucketIfNotExists([]byte("csrf"))
-		if err != nil {
-			return err
-		}
-		_, err = tx.CreateBucketIfNotExists([]byte("sessions"))
-		if err != nil {
-			return err
-		}
 		_, err = tx.CreateBucketIfNotExists([]byte("teams"))
 		return err
 	})
@@ -40,7 +24,6 @@ func main() {
 	}
 
 	db.Close()
-
 	rtr := sesame.NewRouter()
 	mlb.StartMLBService(rtr)
 	rtr.StartServer(":5000")
